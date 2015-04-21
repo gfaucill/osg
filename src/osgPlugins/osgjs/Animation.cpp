@@ -1,4 +1,4 @@
-/*  -*-c++-*- 
+/*  -*-c++-*-
  *  Copyright (C) 2011 Cedric Pinson <cedric.pinson@plopbyte.com>
  */
 
@@ -31,7 +31,7 @@ static bool addJSONChannelVec3(osgAnimation::Vec3LinearChannel* channel, JSONObj
             jsonKeys->getArray().push_back(kf);
         }
         json->getMaps()["KeyFrames"] = jsonKeys;
-            
+
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.Vec3LerpChannel"] = json;
         anim.getMaps()["Channels"]->asArray()->getArray().push_back(jsonChannel);
@@ -60,7 +60,7 @@ static bool addJSONChannelFloat(osgAnimation::FloatLinearChannel* channel, JSONO
             jsonKeys->getArray().push_back(kf);
         }
         json->getMaps()["KeyFrames"] = jsonKeys;
-            
+
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.FloatLerpChannel"] = json;
         anim.getMaps()["Channels"]->asArray()->getArray().push_back(jsonChannel);
@@ -88,9 +88,37 @@ static bool addJSONChannelQuaternion(osgAnimation::QuatSphericalLinearChannel* c
             jsonKeys->getArray().push_back(kf);
         }
         json->getMaps()["KeyFrames"] = jsonKeys;
-            
+
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.QuatSlerpChannel"] = json;
+        anim.getMaps()["Channels"]->asArray()->getArray().push_back(jsonChannel);
+        return true;
+    }
+    return false;
+}
+
+static bool addJSONChannelFloatCubicBezier(osgAnimation::FloatCubicBezierChannel* channel, JSONObject& anim)
+{
+    if(channel->getSampler()) {
+        osg::ref_ptr<JSONObject> json = new JSONObject;
+        json->getMaps()["Name"] = new JSONValue<std::string>(channel->getName());
+        json->getMaps()["TargetName"] = new JSONValue<std::string>(channel->getTargetName());
+
+        osgAnimation::FloatCubicBezierKeyframeContainer * keys = channel->getSamplerTyped()->getKeyframeContainerTyped();
+
+        JSONKeyframes* jsonKeys = new JSONKeyframes();
+
+        for (unsigned int i = 0; i < keys->size(); i++) {
+            JSONVec4Array* kf = new JSONVec4Array(osg::Vec4((*keys)[i].getTime(),
+                                                       (*keys)[i].getValue().getPosition(),
+                                                       (*keys)[i].getValue().getControlPointIn(),
+                                                       (*keys)[i].getValue().getControlPointOut()));
+            jsonKeys->getArray().push_back(kf);
+        }
+        json->getMaps()["KeyFrames"] = jsonKeys;
+
+        osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
+        jsonChannel->getMaps()["osgAnimation.FloatCubicBezierChannel"] = json;
         anim.getMaps()["Channels"]->asArray()->getArray().push_back(jsonChannel);
         return true;
     }
@@ -122,7 +150,14 @@ static void addJSONChannel(osgAnimation::Channel* channel, JSONObject& anim)
                 return;
         }
     }
-    
+
+    {
+        osgAnimation::FloatCubicBezierChannel* c = dynamic_cast<osgAnimation::FloatCubicBezierChannel*>(channel);
+        if (c) {
+            if (addJSONChannelFloatCubicBezier(c, anim))
+                return;
+        }
+    }
 }
 
 JSONObject* createJSONAnimation(osgAnimation::Animation* anim)
@@ -144,7 +179,7 @@ JSONObject* createJSONUpdateMatrixTransform(osgAnimation::UpdateMatrixTransform&
     std::string name = acb.getName();
     osg::ref_ptr<JSONObject> json = new JSONObject;
     json->getMaps()["Name"] = new JSONValue<std::string>(acb.getName());
-    
+
     osg::ref_ptr<JSONArray> jsonStackedArray = new JSONArray();
     json->getMaps()["StackedTransforms"] = jsonStackedArray;
 
