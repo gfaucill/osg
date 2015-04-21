@@ -23,6 +23,7 @@
 #include <osg/ValueObject>
 
 #include <osgAnimation/RigGeometry>
+#include <osgAnimation/Bone>
 
 #include <fstream>
 #include <sstream>
@@ -411,11 +412,27 @@ public:
         _parents.pop_back();
     }
 
-    void apply(osg::MatrixTransform& node) {
+    void applyCommonMatrixTransform(const char * jsClassName, osg::ref_ptr<JSONObject> &json, osg::MatrixTransform &node, JSONObject* parent) {
+        json->addUniqueID();
+        _maps[&node] = json;
 
-        if(dynamic_cast<osgAnimation::Skeleton*>(&node)) {
+        applyCallback(node, json);
+        createJSONStateSet(node, json);
+
+        parent->addChild(jsClassName, json);
+
+        initJsonObjectFromNode(node, *json);
+        json->getMaps()["Matrix"] = new JSONMatrix(node.getMatrix());
+    }
+
+    void apply(osg::MatrixTransform& node) {
+        if (dynamic_cast<osgAnimation::Skeleton*>(&node)) {
            apply(static_cast<osgAnimation::Skeleton&>(node));
            return;
+        }
+        if (dynamic_cast<osgAnimation::Bone*>(&node)) {
+            apply(static_cast<osgAnimation::Bone&>(node));
+            return;
         }
 
         JSONObject* parent = getParent();
@@ -423,7 +440,6 @@ public:
             parent->addChild("osg.MatrixTransform", _maps[&node]->getShadowObject());
             return;
         }
-
         osg::ref_ptr<JSONObject> json = new JSONNode;
         json->addUniqueID();
         _maps[&node] = json;
@@ -435,9 +451,11 @@ public:
 
         initJsonObjectFromNode(node, *json);
         json->getMaps()["Matrix"] = new JSONMatrix(node.getMatrix());
+
         _parents.push_back(json);
         traverse(node);
         _parents.pop_back();
+
     }
 
     void apply(osgAnimation::Skeleton& node) {
@@ -446,16 +464,22 @@ public:
             parent->addChild("osgAnimation.Skeleton", _maps[&node]->getShadowObject());
             return;
         }
-
         osg::ref_ptr<JSONObject> json = new JSONNode;
-        json->addUniqueID();
-        _maps[&node] = json;
+        applyCommonMatrixTransform("osgAnimation.Skeleton", json, node, parent);
+        _parents.push_back(json);
+        traverse(node);
+        _parents.pop_back();
+    }
 
-        applyCallback(node, json);
-
-        parent->addChild("osgAnimation.Skeleton", json);
-        initJsonObjectFromNode(node, *json);
-
+    void apply(osgAnimation::Bone &node) {
+        JSONObject* parent = getParent();
+        if (_maps.find(&node) != _maps.end()) {
+            parent->addChild("osgAnimation.Bone", _maps[&node]->getShadowObject());
+            return;
+        }
+        osg::ref_ptr<JSONObject> json = new JSONNode;
+        applyCommonMatrixTransform("osgAnimation.Bone", json, node, parent);
+        node.getInvBindMatrixInSkeletonSpace();
         _parents.push_back(json);
         traverse(node);
         _parents.pop_back();
