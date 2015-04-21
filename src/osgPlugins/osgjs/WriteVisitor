@@ -22,6 +22,8 @@
 #include <osg/BlendFunc>
 #include <osg/ValueObject>
 
+#include <osgAnimation/RigGeometry>
+
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -182,6 +184,7 @@ public:
     JSONObject* createJSONDrawArrayLengths(osg::DrawArrayLengths* drawArray, osg::Geometry* geom = 0);
 
     JSONObject* createJSONGeometry(osg::Geometry* geom);
+    JSONObject* createJSONRigGeometry(osgAnimation::RigGeometry* rGeom);
 
     JSONObject* getParent() {
         if (_parents.empty()) {
@@ -267,11 +270,18 @@ public:
     }
 
     void apply(osg::Drawable& drw) {
-        osg::Geometry* geom = dynamic_cast<osg::Geometry*>(&drw);
-        if (geom) {
-            JSONObject* json = createJSONGeometry(geom);
+        osgAnimation::RigGeometry * rGeom = dynamic_cast<osgAnimation::RigGeometry*>(&drw);
+        if (rGeom) {
+            JSONObject* json = createJSONRigGeometry(rGeom);
             JSONObject* parent = getParent();
-            parent->addChild("osg.Geometry", json);
+            parent->addChild("osgAnimation.RigGeometry", json);
+        } else {
+            osg::Geometry* geom = dynamic_cast<osg::Geometry*>(&drw);
+            if (geom) {
+                JSONObject* json = createJSONGeometry(geom);
+                JSONObject* parent = getParent();
+                parent->addChild("osg.Geometry", json);
+           }
         }
     }
 

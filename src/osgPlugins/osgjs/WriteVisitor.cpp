@@ -11,6 +11,8 @@
 #include <osg/BlendFunc>
 #include <osgSim/ShapeAttribute>
 
+#include <osgAnimation/VertexInfluence>
+
 #include "Base64"
 
 
@@ -482,6 +484,32 @@ JSONObject* WriteVisitor::createJSONGeometry(osg::Geometry* geom)
         json->getMaps()["PrimitiveSetList"] = primitives;
     }
     return json.get();
+}
+
+JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rGeom)
+{
+    //TODO : Convert data to JSONVertexArray "Float32Array"
+    JSONObject* json = createJSONGeometry(rGeom);
+    osg::ref_ptr<JSONArray> influenceMap = new JSONArray();
+
+    for(osgAnimation::VertexInfluenceMap::iterator it = rGeom->getInfluenceMap()->begin() ;
+        it!=rGeom->getInfluenceMap()->end(); it++ ) {
+        osg::ref_ptr<JSONArray> vertexInfluence = new JSONArray();
+        osgAnimation::VertexList vi = it->second;
+
+        for (osgAnimation::VertexList::iterator itt = vi.begin();  itt!=vi.end(); itt++) {
+            JSONVec2Array * iw = new JSONVec2Array(osg::Vec2((*itt).first, (*itt).second));
+            vertexInfluence->getArray().push_back(iw);
+        }
+        osg::ref_ptr<JSONObject> obj = new JSONObject;
+        obj->getMaps()[it->second.getName()] = vertexInfluence;
+        influenceMap->getArray().push_back(obj);
+    }
+
+    json->getMaps()["InfluenceMap"] = influenceMap;
+    json->getMaps()["SourceGeometry"] =  createJSONGeometry(rGeom->getSourceGeometry());
+
+    return json;
 }
 
 JSONObject* WriteVisitor::createJSONBlendFunc(osg::BlendFunc* sa)
