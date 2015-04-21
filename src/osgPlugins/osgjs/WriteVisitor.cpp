@@ -14,6 +14,8 @@
 
 #include <osgAnimation/VertexInfluence>
 
+#include <osgAnimation/BoneMapVisitor>
+
 #include "Base64"
 
 
@@ -442,6 +444,22 @@ JSONObject* WriteVisitor::createJSONGeometry(osg::Geometry* geom)
         }
     }
 
+    for(unsigned int j = 0 ; j < geom->getNumVertexAttribArrays() ; ++ j){
+        unsigned int boneChannel = 0;
+        if(!geom->getVertexAttribArray(j) || !geom->getVertexAttribArray(j)->getUserValue("boneWeight", boneChannel)) {
+            continue;
+        }
+        std::ostringstream oss;
+        oss << "BoneWeight" << boneChannel;
+        osg::Array* animationBuffer = geom->getVertexAttribArray(j);
+        attributes->getMaps()[oss.str()] = createJSONBufferArray(animationBuffer, geom);
+        int nb = animationBuffer->getNumElements();
+        if (nbVertexes != nb) {
+            osg::notify(osg::FATAL) << "Fatal nb boneWeight" << boneChannel << "  " << nb << " != " << nbVertexes << std::endl;
+            error();
+        }
+    }
+
     json->getMaps()["VertexAttributeList"] = attributes;
 
     if (!geom->getPrimitiveSetList().empty()) {
@@ -492,34 +510,22 @@ JSONObject* WriteVisitor::createJSONGeometry(osg::Geometry* geom)
     return json.get();
 }
 
-JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rGeom)
+JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rigGeom)
 {
-    JSONObject* json = createJSONGeometry(rGeom);
-    osg::ref_ptr<JSONObject> influenceMap = new JSONObject();
+    //TODO : Convert data to JSONVertexArray "Float32Array"
+    JSONObject* json = createJSONGeometry(rigGeom);
 
-    for(osgAnimation::VertexInfluenceMap::iterator it = rGeom->getInfluenceMap()->begin() ;
-        it!=rGeom->getInfluenceMap()->end(); it++ ) {
-        osgAnimation::VertexList vi = it->second;
-        osg::ref_ptr<osg::UShortArray> vertexIndexArray = new osg::UShortArray();
-        osg::ref_ptr<osg::FloatArray> vertexWeigthArray = new osg::FloatArray();
+    osgAnimation::BoneMapVisitor mapVisitor;
+    rigGeom->getSkeleton()->accept(mapVisitor);
 
-        for (osgAnimation::VertexList::iterator itt = vi.begin();  itt!=vi.end(); itt++) {
-            vertexIndexArray->push_back((*itt).first);
-            vertexWeigthArray->push_back((*itt).second);
-        }
-        osg::ref_ptr<JSONObject> jsInfluenceMap = new JSONObject;
-
-        osg::ref_ptr<JSONBufferArray> jsVertexIndexArray = new JSONBufferArray(vertexIndexArray);
-        jsInfluenceMap->getMaps()["Index"] = jsVertexIndexArray;
-
-        osg::ref_ptr<JSONBufferArray> jsVertexWeightArray = new JSONBufferArray(vertexWeigthArray);
-        jsInfluenceMap->getMaps()["Weight"] = jsVertexWeightArray;
-
-        influenceMap->getMaps()[it->second.getName()] = jsInfluenceMap;
+    osgAnimation::BoneMap bm = mapVisitor.getBoneMap();
+    osg::ref_ptr<JSONObject> boneMap = new JSONObject;
+    for(osgAnimation::BoneMap::const_iterator it = bm.begin() ; it != bm.end() ; ++ it) {
+        boneMap->getMaps()[it->first] = new JSONMatrix(it->second->getMatrixInBoneSpace());
     }
 
-    json->getMaps()["InfluenceMap"] = influenceMap;
-    json->getMaps()["SourceGeometry"] =  createJSONGeometry(rGeom->getSourceGeometry());
+    json->getMaps()["BoneMap"] = boneMap;
+    json->getMaps()["SourceGeometry"] =  createJSONGeometry(rigGeom->getSourceGeometry());
 
     return json;
 }
