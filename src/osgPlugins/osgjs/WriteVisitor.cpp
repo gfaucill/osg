@@ -495,13 +495,22 @@ JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rGeom
     for(osgAnimation::VertexInfluenceMap::iterator it = rGeom->getInfluenceMap()->begin() ;
         it!=rGeom->getInfluenceMap()->end(); it++ ) {
         osgAnimation::VertexList vi = it->second;
-        osg::ref_ptr<osg::Vec2Array> vertexInfluenceArray = new osg::Vec2Array();
+        osg::ref_ptr<osg::IntArray> vertexIndexArray = new osg::IntArray();
+        osg::ref_ptr<osg::FloatArray> vertexWeigthArray = new osg::FloatArray();
 
         for (osgAnimation::VertexList::iterator itt = vi.begin();  itt!=vi.end(); itt++) {
-            vertexInfluenceArray->push_back(osg::Vec2((*itt).first, (*itt).second));
+            vertexIndexArray->push_back((*itt).first);
+            vertexWeigthArray->push_back((*itt).second);
         }
-        osg::ref_ptr<JSONVertexArray> jsVertexInfluenceArray = new JSONVertexArray(vertexInfluenceArray);
-        influenceMap->getMaps()[it->second.getName()] = jsVertexInfluenceArray;
+        osg::ref_ptr<JSONObject> jsInfluenceMap = new JSONObject;
+
+        osg::ref_ptr<JSONVertexArray> jsVertexIndexArray = new JSONVertexArray(vertexIndexArray);
+        jsInfluenceMap->getMaps()["Index"] = jsVertexIndexArray;
+
+        osg::ref_ptr<JSONVertexArray> jsVertexWeightArray = new JSONVertexArray(vertexWeigthArray);
+        jsInfluenceMap->getMaps()["Weight"] = jsVertexWeightArray;
+
+        influenceMap->getMaps()[it->second.getName()] = jsInfluenceMap;
     }
 
     json->getMaps()["InfluenceMap"] = influenceMap;
