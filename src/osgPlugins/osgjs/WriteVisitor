@@ -24,6 +24,7 @@
 
 #include <osgAnimation/RigGeometry>
 #include <osgAnimation/Bone>
+#include <osgAnimation/UpdateBone>
 
 #include <fstream>
 #include <sstream>
@@ -259,6 +260,16 @@ public:
                         _maps[&node] = json;
                         jsonObject->getMaps()["osgAnimation.UpdateSkeleton"] = json;
                         updateCallbacks->getArray().push_back(jsonObject);
+                    } else {
+                        osgAnimation::UpdateBone* upBone = dynamic_cast<osgAnimation::UpdateBone*>(nc);
+                        if (upBone) {
+                            osg::ref_ptr<JSONObject> jsonCallback = createJSONUpdateMatrixTransform(*upBone);
+                            if (jsonCallback.valid()) {
+                                osg::ref_ptr<JSONObject> jsonObject = new JSONObject;
+                                jsonObject->getMaps()["osgAnimation.UpdateBone"] = jsonCallback;
+                                updateCallbacks->getArray().push_back(jsonObject);
+                            }
+                        }
                     }
                 }
             }
@@ -479,7 +490,10 @@ public:
         }
         osg::ref_ptr<JSONObject> json = new JSONNode;
         applyCommonMatrixTransform("osgAnimation.Bone", json, node, parent);
-        node.getInvBindMatrixInSkeletonSpace();
+
+        initJsonObjectFromNode(node, *json);
+        json->getMaps()["InvBindMatrixInSkeletonSpace"] = new JSONMatrix(node.getInvBindMatrixInSkeletonSpace());
+        //json->getMaps()["MatrixInSkeletonSpace"] = new JSONMatrix(node.getMatrixInSkeletonSpace());
         _parents.push_back(json);
         traverse(node);
         _parents.pop_back();
