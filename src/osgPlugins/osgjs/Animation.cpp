@@ -4,11 +4,13 @@
 
 #include <osgAnimation/Animation>
 #include <osgAnimation/Channel>
+#include <osgAnimation/CubicBezier>
 #include <osgAnimation/Sampler>
 #include <osgAnimation/UpdateMatrixTransform>
 #include <osgAnimation/StackedTranslateElement>
 #include <osgAnimation/StackedQuaternionElement>
 #include <osgAnimation/StackedRotateAxisElement>
+#include <osg/Array>
 #include "JSON_Objects"
 
 static bool addJSONChannelVec3(osgAnimation::Vec3LinearChannel* channel, JSONObject& anim)
@@ -40,8 +42,6 @@ static bool addJSONChannelVec3(osgAnimation::Vec3LinearChannel* channel, JSONObj
     return false;
 }
 
-
-
 static bool addJSONChannelFloat(osgAnimation::FloatLinearChannel* channel, JSONObject& anim)
 {
     if (channel->getSampler()) {
@@ -68,7 +68,6 @@ static bool addJSONChannelFloat(osgAnimation::FloatLinearChannel* channel, JSONO
     }
     return false;
 }
-
 
 static bool addJSONChannelQuaternion(osgAnimation::QuatSphericalLinearChannel* channel, JSONObject& anim)
 {
@@ -105,7 +104,6 @@ static bool addJSONChannelFloatCubicBezier(osgAnimation::FloatCubicBezierChannel
         json->getMaps()["TargetName"] = new JSONValue<std::string>(channel->getTargetName());
 
         osgAnimation::FloatCubicBezierKeyframeContainer * keys = channel->getSamplerTyped()->getKeyframeContainerTyped();
-
         JSONKeyframes* jsonKeys = new JSONKeyframes();
 
         for (unsigned int i = 0; i < keys->size(); i++) {
@@ -119,6 +117,45 @@ static bool addJSONChannelFloatCubicBezier(osgAnimation::FloatCubicBezierChannel
 
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.FloatCubicBezierChannel"] = json;
+        anim.getMaps()["Channels"]->asArray()->getArray().push_back(jsonChannel);
+        return true;
+    }
+    return false;
+}
+
+static bool addJSONChannelVec3CubicBezier(osgAnimation::Vec3CubicBezierChannel* channel, JSONObject& anim)
+{
+    if(channel->getSampler()) {
+        osg::ref_ptr<JSONObject> json = new JSONObject;
+        json->getMaps()["Name"] = new JSONValue<std::string>(channel->getName());
+        json->getMaps()["TargetName"] = new JSONValue<std::string>(channel->getTargetName());
+
+        osgAnimation::Vec3CubicBezierKeyframeContainer * keys = channel->getSamplerTyped()->getKeyframeContainerTyped();
+        JSONKeyframes* jsonKeys = new JSONKeyframes();
+
+        for (unsigned int i = 0; i < keys->size(); i++) {
+            osg::ref_ptr<JSONArray> kf = new JSONArray;
+
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getTime()));
+
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getPosition().x()));
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getPosition().y()));
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getPosition().z()));
+
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointIn().x()));
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointIn().y()));
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointIn().z()));
+
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointOut().x()));
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointOut().y()));
+            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointOut().z()));
+
+            jsonKeys->getArray().push_back(kf);
+        }
+        json->getMaps()["KeyFrames"] = jsonKeys;
+
+        osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
+        jsonChannel->getMaps()["osgAnimation.Vec3CubicBezierChannel"] = json;
         anim.getMaps()["Channels"]->asArray()->getArray().push_back(jsonChannel);
         return true;
     }
@@ -158,6 +195,14 @@ static void addJSONChannel(osgAnimation::Channel* channel, JSONObject& anim)
                 return;
         }
     }
+
+    {
+        osgAnimation::Vec3CubicBezierChannel *c = dynamic_cast<osgAnimation::Vec3CubicBezierChannel*>(channel);
+        if (c) {
+            if (addJSONChannelVec3CubicBezier(c, anim))
+                return;
+        }
+    }
 }
 
 JSONObject* createJSONAnimation(osgAnimation::Animation* anim)
@@ -171,8 +216,6 @@ JSONObject* createJSONAnimation(osgAnimation::Animation* anim)
     }
     return json.release();
 }
-
-
 
 JSONObject* createJSONUpdateMatrixTransform(osgAnimation::UpdateMatrixTransform& acb)
 {
