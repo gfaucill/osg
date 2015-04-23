@@ -147,28 +147,41 @@ static bool addJSONChannelVec3CubicBezier(osgAnimation::Vec3CubicBezierChannel* 
         json->getMaps()["TargetName"] = new JSONValue<std::string>(channel->getTargetName());
 
         osgAnimation::Vec3CubicBezierKeyframeContainer * keys = channel->getSamplerTyped()->getKeyframeContainerTyped();
-        JSONKeyframes* jsonKeys = new JSONKeyframes();
+        osg::ref_ptr<osg::FloatArray> timeArray = new osg::FloatArray,
+            positionArray = new osg::FloatArray,
+            controlPointInArray = new osg::FloatArray,
+            controlPointOutArray = new osg::FloatArray;
 
         for (unsigned int i = 0; i < keys->size(); i++) {
-            osg::ref_ptr<JSONArray> kf = new JSONArray;
+            timeArray->push_back((*keys)[i].getTime());
 
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getTime()));
+            positionArray->push_back((*keys)[i].getValue().getPosition().x());
+            positionArray->push_back((*keys)[i].getValue().getPosition().y());
+            positionArray->push_back((*keys)[i].getValue().getPosition().z());
 
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getPosition().x()));
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getPosition().y()));
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getPosition().z()));
+            controlPointInArray->push_back((*keys)[i].getValue().getControlPointIn().x());
+            controlPointInArray->push_back((*keys)[i].getValue().getControlPointIn().y());
+            controlPointInArray->push_back((*keys)[i].getValue().getControlPointIn().z());
 
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointIn().x()));
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointIn().y()));
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointIn().z()));
-
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointOut().x()));
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointOut().y()));
-            kf->getArray().push_back(new JSONValue<double>((*keys)[i].getValue().getControlPointOut().z()));
-
-            jsonKeys->getArray().push_back(kf);
+            controlPointOutArray->push_back((*keys)[i].getValue().getControlPointOut().x());
+            controlPointOutArray->push_back((*keys)[i].getValue().getControlPointOut().y());
+            controlPointOutArray->push_back((*keys)[i].getValue().getControlPointOut().z());
         }
-        json->getMaps()["KeyFrames"] = jsonKeys;
+        osg::ref_ptr<JSONObject> jsKeys = new JSONObject;
+
+        osg::ref_ptr<JSONVertexArray> controlOutVertexArray = new JSONVertexArray(controlPointOutArray);
+        jsKeys->getMaps()["ControlPointOut"] = controlOutVertexArray;
+
+        osg::ref_ptr<JSONVertexArray> controlInVertexArray = new JSONVertexArray(controlPointInArray);
+        jsKeys->getMaps()["ControlPointIn"] = controlInVertexArray;
+
+        osg::ref_ptr<JSONVertexArray> positionVertexArray = new JSONVertexArray(positionArray);
+        jsKeys->getMaps()["Position"] = positionVertexArray;
+
+        osg::ref_ptr<JSONVertexArray> timeVertexArray = new JSONVertexArray(timeArray);
+        jsKeys->getMaps()["Time"] = timeVertexArray;
+
+        json->getMaps()["KeyFrames"] = jsKeys;
 
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.Vec3CubicBezierChannel"] = json;
