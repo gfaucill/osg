@@ -484,6 +484,11 @@ JSONObject* WriteVisitor::createJSONGeometry(osg::Geometry* geom)
         }
         json->getMaps()["PrimitiveSetList"] = primitives;
     }
+    if (geom->getComputeBoundingBoxCallback()) {
+           osg::ref_ptr<JSONObject> jsonObj = new JSONObject;
+           jsonObj->addUniqueID();
+           json->getMaps()["osg.ComputeBoundingBoxCallback"] = jsonObj;
+    }
     return json.get();
 }
 
