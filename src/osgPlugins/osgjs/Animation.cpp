@@ -104,16 +104,32 @@ static bool addJSONChannelFloatCubicBezier(osgAnimation::FloatCubicBezierChannel
         json->getMaps()["TargetName"] = new JSONValue<std::string>(channel->getTargetName());
 
         osgAnimation::FloatCubicBezierKeyframeContainer * keys = channel->getSamplerTyped()->getKeyframeContainerTyped();
-        JSONKeyframes* jsonKeys = new JSONKeyframes();
+        osg::ref_ptr<osg::FloatArray> timeArray = new osg::FloatArray,
+            positionArray = new osg::FloatArray,
+            controlPointInArray = new osg::FloatArray,
+            controlPointOutArray = new osg::FloatArray;
 
         for (unsigned int i = 0; i < keys->size(); i++) {
-            JSONVec4Array* kf = new JSONVec4Array(osg::Vec4((*keys)[i].getTime(),
-                                                       (*keys)[i].getValue().getPosition(),
-                                                       (*keys)[i].getValue().getControlPointIn(),
-                                                       (*keys)[i].getValue().getControlPointOut()));
-            jsonKeys->getArray().push_back(kf);
+            timeArray->push_back((*keys)[i].getTime());
+            positionArray->push_back((*keys)[i].getValue().getPosition());
+            controlPointInArray->push_back((*keys)[i].getValue().getControlPointIn());
+            controlPointOutArray->push_back((*keys)[i].getValue().getControlPointOut());
         }
-        json->getMaps()["KeyFrames"] = jsonKeys;
+        osg::ref_ptr<JSONObject> jsKeys = new JSONObject;
+
+        osg::ref_ptr<JSONVertexArray> controlOutVertexArray = new JSONVertexArray(controlPointOutArray);
+        jsKeys->getMaps()["ControlPointOut"] = controlOutVertexArray;
+
+        osg::ref_ptr<JSONVertexArray> controlInVertexArray = new JSONVertexArray(controlPointInArray);
+        jsKeys->getMaps()["ControlPointIn"] = controlInVertexArray;
+
+        osg::ref_ptr<JSONVertexArray> positionVertexArray = new JSONVertexArray(positionArray);
+        jsKeys->getMaps()["Position"] = positionVertexArray;
+
+        osg::ref_ptr<JSONVertexArray> timeVertexArray = new JSONVertexArray(timeArray);
+        jsKeys->getMaps()["Time"] = timeVertexArray;
+
+        json->getMaps()["KeyFrames"] = jsKeys;
 
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.FloatCubicBezierChannel"] = json;
