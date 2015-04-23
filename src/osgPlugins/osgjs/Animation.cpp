@@ -10,6 +10,7 @@
 #include <osgAnimation/StackedTranslateElement>
 #include <osgAnimation/StackedQuaternionElement>
 #include <osgAnimation/StackedRotateAxisElement>
+#include <osgAnimation/StackedMatrixElement>
 #include <osg/Array>
 #include "JSON_Objects"
 
@@ -297,6 +298,20 @@ JSONObject* createJSONUpdateMatrixTransform(osgAnimation::UpdateMatrixTransform&
 
                 osg::ref_ptr<JSONObject> jsonElementObject = new JSONObject;
                 jsonElementObject->getMaps()["osgAnimation.StackedRotateAxis"] = jsonElement;
+                jsonStackedArray->getArray().push_back(jsonElementObject);
+                continue;
+            }
+        }
+
+
+        {
+            osgAnimation::StackedMatrixElement * element = dynamic_cast<osgAnimation::StackedMatrixElement*>(st[i].get());
+            if (element) {
+                osg::ref_ptr<JSONObject> jsonElement = new JSONObject;
+                jsonElement->getMaps()["Matrix"] = new JSONMatrix(element->getMatrix());
+
+                osg::ref_ptr<JSONObject> jsonElementObject = new JSONObject;
+                jsonElementObject->getMaps()["osgAnimation.StackedMatrixElement"] = jsonElement;
                 jsonStackedArray->getArray().push_back(jsonElementObject);
                 continue;
             }
