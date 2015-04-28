@@ -493,7 +493,7 @@ public:
 
         initJsonObjectFromNode(node, *json);
         json->getMaps()["InvBindMatrixInSkeletonSpace"] = new JSONMatrix(node.getInvBindMatrixInSkeletonSpace());
-        //json->getMaps()["MatrixInSkeletonSpace"] = new JSONMatrix(node.getMatrixInSkeletonSpace());
+        json->getMaps()["MatrixInSkeletonSpace"] = new JSONMatrix(node.getMatrixInSkeletonSpace());
         _parents.push_back(json);
         traverse(node);
         _parents.pop_back();
