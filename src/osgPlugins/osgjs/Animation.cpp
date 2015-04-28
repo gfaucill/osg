@@ -308,6 +308,7 @@ JSONObject* createJSONUpdateMatrixTransform(osgAnimation::UpdateMatrixTransform&
             osgAnimation::StackedMatrixElement * element = dynamic_cast<osgAnimation::StackedMatrixElement*>(st[i].get());
             if (element) {
                 osg::ref_ptr<JSONObject> jsonElement = new JSONObject;
+                jsonElement->getMaps()["Name"] = new JSONValue<std::string>(element->getName());
                 jsonElement->getMaps()["Matrix"] = new JSONMatrix(element->getMatrix());
 
                 osg::ref_ptr<JSONObject> jsonElementObject = new JSONObject;
