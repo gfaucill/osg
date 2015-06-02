@@ -14,18 +14,69 @@
 #define ANIMATION_VISITOR
 
 #include <osgUtil/UpdateVisitor>
-#include <osgAnimation/UpdateMatrixTransform>
-#include <osgAnimation/AnimationManagerBase>
-#include <osgAnimation/BasicAnimationManager>
+#include <osgAnimation/RigTransformHardware>
+#include <osgAnimation/RigGeometry>
+
+#include "GeometryUniqueVisitor"
+#include <osg/ValueObject>
+#include <set>
 
 
 // the idea is to create true Geometry if skeleton with RigGeometry
 class AnimationVisitor : public osgUtil::UpdateVisitor
 {
 public:
-    AnimationVisitor() {
+    AnimationVisitor():
+        _logger("AnimationVisitor::apply(..)")
+    {
         setFrameStamp(new osg::FrameStamp());
     }
+
+    void apply(osg::Drawable& drawable) {
+        // skip drawables already processed
+        if (isProcessed(drawable)) {
+            return;
+        }
+
+        apply(drawable.asGeometry());
+
+        setProcessed(drawable);
+    }
+
+    void apply(osg::Geometry* geometry) {
+        osgAnimation::RigGeometry* rig = dynamic_cast<osgAnimation::RigGeometry*>(geometry);
+        if(rig) {
+            apply(*rig);
+        }
+    }
+
+    void apply(osgAnimation::RigGeometry& geometry) {
+        // find skeleton
+        osgAnimation::UpdateRigGeometry rigUpdater;
+        rigUpdater.update(0, &geometry);
+
+        osgAnimation::RigTransformHardware rth;
+        rth(geometry);
+        for(unsigned int i = 0 ; i < rth.getNumVertexAttrib() ; ++ i) {
+            unsigned int j = 0;
+            while(geometry.getVertexAttribArray(j))
+                ++ j;
+            geometry.setVertexAttribArray(j, rth.getVertexAttrib(i), osg::Array::BIND_PER_VERTEX);
+            geometry.getVertexAttribArray(j)->setUserValue("boneWeight", i);
+        }
+    }
+
+protected:
+    bool isProcessed(osg::Drawable& node) {
+        return _processed.find(&node) != _processed.end();
+    }
+
+    void setProcessed(osg::Drawable& node) {
+        _processed.insert(&node);
+    }
+
+    std::set<osg::Drawable*> _processed;
+    StatLogger _logger;
 };
 
 #endif

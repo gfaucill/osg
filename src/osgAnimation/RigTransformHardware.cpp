@@ -250,7 +250,7 @@ bool RigTransformHardware::init(RigGeometry& geom)
         std::stringstream ss;
         ss << "boneWeight" << i;
         program->addBindAttribLocation(ss.str(), attribIndex + i);
-        geom.setVertexAttribArray(attribIndex + i, getVertexAttrib(i));
+        geom.setVertexAttribArray(attribIndex + i, getVertexAttrib(i), osg::Array::BIND_PER_VERTEX);
         OSG_INFO << "set vertex attrib " << ss.str() << std::endl;
     }
     program->addShader(_shader.get());
