@@ -492,7 +492,7 @@ public:
         applyCommonMatrixTransform("osgAnimation.Bone", json, node, parent);
 
         json->getMaps()["InvBindMatrixInSkeletonSpace"] = new JSONMatrix(node.getInvBindMatrixInSkeletonSpace());
-        json->getMaps()["MatrixInSkeletonSpace"] = new JSONMatrix(node.getMatrixInSkeletonSpace());
+        //json->getMaps()["MatrixInSkeletonSpace"] = new JSONMatrix(node.getMatrixInSkeletonSpace());
 
         _parents.push_back(json);
         traverse(node);

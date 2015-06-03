@@ -21,19 +21,27 @@ static bool addJSONChannelVec3(osgAnimation::Vec3LinearChannel* channel, JSONObj
         json->getMaps()["Name"] = new JSONValue<std::string>(channel->getName());
         json->getMaps()["TargetName"] = new JSONValue<std::string>(channel->getTargetName());
         osgAnimation::Vec3KeyframeContainer* keys = channel->getSamplerTyped()->getKeyframeContainerTyped();
-        JSONKeyframes* jsonKeys = new JSONKeyframes();
-        //if (!keys->getName().empty()) {
-        //    jsonKeys->getMaps()["Name"] = new JSONValue<std::string>(keys->getName());
-        //}
+        osg::ref_ptr<JSONObject> jsKeys = new JSONObject;
+        osg::ref_ptr<osg::FloatArray> timesArray = new osg::FloatArray;
+        osg::ref_ptr<osg::FloatArray> keysArrayX = new osg::FloatArray;
+        osg::ref_ptr<osg::FloatArray> keysArrayY = new osg::FloatArray;
+        osg::ref_ptr<osg::FloatArray> keysArrayZ = new osg::FloatArray;
 
         for (unsigned int i = 0; i < keys->size(); i++) {
-            JSONVec4Array* kf = new JSONVec4Array(osg::Vec4((*keys)[i].getTime(),
-                                                            (*keys)[i].getValue()[0],
-                                                            (*keys)[i].getValue()[1],
-                                                            (*keys)[i].getValue()[2]));
-            jsonKeys->getArray().push_back(kf);
+            timesArray->push_back((*keys)[i].getTime());
+            keysArrayX->push_back((*keys)[i].getValue()[0]);
+            keysArrayY->push_back((*keys)[i].getValue()[1]);
+            keysArrayZ->push_back((*keys)[i].getValue()[2]);
         }
-        json->getMaps()["KeyFrames"] = jsonKeys;
+
+        osg::ref_ptr<JSONArray> keysArray = new JSONArray;
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayX));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayY));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayZ));
+
+        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray);
+        jsKeys->getMaps()["Key"] = keysArray;
+        json->getMaps()["KeyFrames"] = jsKeys;
 
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.Vec3LerpChannel"] = json;
@@ -50,17 +58,18 @@ static bool addJSONChannelFloat(osgAnimation::FloatLinearChannel* channel, JSONO
         json->getMaps()["Name"] = new JSONValue<std::string>(channel->getName());
         json->getMaps()["TargetName"] = new JSONValue<std::string>(channel->getTargetName());
         osgAnimation::FloatKeyframeContainer* keys = channel->getSamplerTyped()->getKeyframeContainerTyped();
-        JSONKeyframes* jsonKeys = new JSONKeyframes();
-        //if (!keys->getName().empty()) {
-        //    jsonKeys->getMaps()["Name"] = new JSONValue<std::string>(keys->getName());
-        //}
+        osg::ref_ptr<JSONObject> jsKeys = new JSONObject;
+        osg::ref_ptr<osg::FloatArray> timesArray = new osg::FloatArray;
+        osg::ref_ptr<osg::FloatArray> keysArray = new osg::FloatArray;
 
         for (unsigned int i = 0; i < keys->size(); i++) {
-            JSONVec2Array* kf = new JSONVec2Array(osg::Vec2((*keys)[i].getTime(),
-                                                            (*keys)[i].getValue()));
-            jsonKeys->getArray().push_back(kf);
+            timesArray->push_back((*keys)[i].getTime());
+            keysArray->push_back((*keys)[i].getValue());
         }
-        json->getMaps()["KeyFrames"] = jsonKeys;
+
+        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray);
+        jsKeys->getMaps()["Key"] = new JSONBufferArray(keysArray);
+        json->getMaps()["KeyFrames"] = jsKeys;
 
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.FloatLerpChannel"] = json;
@@ -77,17 +86,31 @@ static bool addJSONChannelQuaternion(osgAnimation::QuatSphericalLinearChannel* c
         json->getMaps()["Name"] = new JSONValue<std::string>(channel->getName());
         json->getMaps()["TargetName"] = new JSONValue<std::string>(channel->getTargetName());
         osgAnimation::QuatKeyframeContainer* keys = channel->getSamplerTyped()->getKeyframeContainerTyped();
-        JSONKeyframes* jsonKeys = new JSONKeyframes();
+        osg::ref_ptr<JSONObject> jsKeys = new JSONObject;
+        osg::ref_ptr<osg::FloatArray> timesArray = new osg::FloatArray;
+
+        osg::ref_ptr<osg::FloatArray> keysArrayX = new osg::FloatArray;
+        osg::ref_ptr<osg::FloatArray> keysArrayY = new osg::FloatArray;
+        osg::ref_ptr<osg::FloatArray> keysArrayZ = new osg::FloatArray;
+        osg::ref_ptr<osg::FloatArray> keysArrayW = new osg::FloatArray;
 
         for (unsigned int i = 0; i < keys->size(); i++) {
-            JSONVec5Array* kf = new JSONVec5Array(Vec5((*keys)[i].getTime(),
-                                                       (*keys)[i].getValue()[0],
-                                                       (*keys)[i].getValue()[1],
-                                                       (*keys)[i].getValue()[2],
-                                                       (*keys)[i].getValue()[3]));
-            jsonKeys->getArray().push_back(kf);
+            timesArray->push_back((*keys)[i].getTime());
+            keysArrayX->push_back((*keys)[i].getValue()[0]);
+            keysArrayY->push_back((*keys)[i].getValue()[1]);
+            keysArrayZ->push_back((*keys)[i].getValue()[2]);
+            keysArrayW->push_back((*keys)[i].getValue()[3]);
         }
-        json->getMaps()["KeyFrames"] = jsonKeys;
+
+        osg::ref_ptr<JSONArray> keysArray = new JSONArray;
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayX));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayY));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayZ));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayW));
+
+        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray);
+        jsKeys->getMaps()["Key"] = keysArray;
+        json->getMaps()["KeyFrames"] = jsKeys;
 
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
         jsonChannel->getMaps()["osgAnimation.QuatSlerpChannel"] = json;
