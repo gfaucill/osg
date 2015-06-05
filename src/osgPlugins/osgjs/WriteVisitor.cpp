@@ -31,6 +31,31 @@ osg::Array* getTangentSpaceArray(osg::Geometry& geometry) {
     return 0;
 }
 
+
+osg::Array* getAnimationBonesArray(osg::Geometry& geometry) {
+    for(unsigned int i = 0 ; i < geometry.getNumVertexAttribArrays() ; ++ i) {
+        osg::Array* attribute = geometry.getVertexAttribArray(i);
+        bool isBones = false;
+        if(attribute && attribute->getUserValue("bones", isBones) && isBones) {
+            return attribute;
+        }
+    }
+    return 0;
+}
+
+
+osg::Array* getAnimationWeightsArray(osg::Geometry& geometry) {
+    for(unsigned int i = 0 ; i < geometry.getNumVertexAttribArrays() ; ++ i) {
+        osg::Array* attribute = geometry.getVertexAttribArray(i);
+        bool isWeights = false;
+        if(attribute && attribute->getUserValue("weights", isWeights) && isWeights) {
+            return attribute;
+        }
+    }
+    return 0;
+}
+
+
 void translateObject(JSONObject* json, osg::Object* osg)
 {
     if (!osg->getName().empty()) {
@@ -444,18 +469,19 @@ JSONObject* WriteVisitor::createJSONGeometry(osg::Geometry* geom)
         }
     }
 
-    for(unsigned int j = 0 ; j < geom->getNumVertexAttribArrays() ; ++ j){
-        unsigned int boneChannel = 0;
-        if(!geom->getVertexAttribArray(j) || !geom->getVertexAttribArray(j)->getUserValue("boneWeight", boneChannel)) {
-            continue;
-        }
-        std::ostringstream oss;
-        oss << "BoneWeight" << boneChannel;
-        osg::Array* animationBuffer = geom->getVertexAttribArray(j);
-        attributes->getMaps()[oss.str()] = createJSONBufferArray(animationBuffer, geom);
-        int nb = animationBuffer->getNumElements();
+    osg::Array* bones = getAnimationBonesArray(*geom);
+    osg::Array* weights = getAnimationWeightsArray(*geom);
+    if (bones && weights) {
+        attributes->getMaps()["Bones"] = createJSONBufferArray(bones, geom);
+        attributes->getMaps()["Weights"] = createJSONBufferArray(weights, geom);
+        int nb = bones->getNumElements();
         if (nbVertexes != nb) {
-            osg::notify(osg::FATAL) << "Fatal nb boneWeight" << boneChannel << "  " << nb << " != " << nbVertexes << std::endl;
+            osg::notify(osg::FATAL) << "Fatal nb bones " << nb << " != " << nbVertexes << std::endl;
+            error();
+        }
+        nb = weights->getNumElements();
+        if (nbVertexes != nb) {
+            osg::notify(osg::FATAL) << "Fatal nb weights " << nb << " != " << nbVertexes << std::endl;
             error();
         }
     }
