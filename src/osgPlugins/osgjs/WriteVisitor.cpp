@@ -12,10 +12,6 @@
 #include <osgSim/ShapeAttribute>
 #include <osg/Array>
 
-#include <osgAnimation/VertexInfluence>
-
-#include <osgAnimation/BoneMapVisitor>
-
 #include "Base64"
 
 
@@ -53,6 +49,26 @@ osg::Array* getAnimationWeightsArray(osg::Geometry& geometry) {
         }
     }
     return 0;
+}
+
+
+osg::ref_ptr<JSONObject> buildRigBoneMap(osgAnimation::RigGeometry& geometry) {
+    osg::Array* bones = getAnimationBonesArray(geometry);
+    osg::ref_ptr<JSONObject> boneMap = new JSONObject;
+
+    unsigned int paletteIndex = 0;
+    while(true) {
+        std::ostringstream oss;
+        oss << "animationBone_" << paletteIndex;
+        std::string boneName, palette = oss.str();
+        if(!bones->getUserValue(palette, boneName)) {
+            break;
+        }
+        boneMap->getMaps()[boneName] = new JSONValue<int>(paletteIndex);
+        ++ paletteIndex;
+    }
+
+    return boneMap;
 }
 
 
@@ -541,16 +557,7 @@ JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rigGe
     //TODO : Convert data to JSONVertexArray "Float32Array"
     JSONObject* json = createJSONGeometry(rigGeom);
 
-    osgAnimation::BoneMapVisitor mapVisitor;
-    rigGeom->getSkeleton()->accept(mapVisitor);
-
-    osgAnimation::BoneMap bm = mapVisitor.getBoneMap();
-    osg::ref_ptr<JSONObject> boneMap = new JSONObject;
-    for(osgAnimation::BoneMap::const_iterator it = bm.begin() ; it != bm.end() ; ++ it) {
-        boneMap->getMaps()[it->first] = new JSONMatrix(it->second->getMatrixInBoneSpace());
-    }
-
-    json->getMaps()["BoneMap"] = boneMap;
+    json->getMaps()["BoneMap"] = buildRigBoneMap(*rigGeom);
     json->getMaps()["SourceGeometry"] =  createJSONGeometry(rigGeom->getSourceGeometry());
 
     return json;
