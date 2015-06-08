@@ -24,6 +24,9 @@
 #include <algorithm>
 #include <utility>
 #include <set>
+#include <map>
+#include <sstream>
+
 
 struct sort_weights {
     bool operator()(const std::pair<unsigned int, float> &left, const std::pair<unsigned int, float> &right) {
@@ -98,6 +101,11 @@ public:
             bones->push_back(vertexBones);
             weights->push_back(vertexWeights);
         }
+
+        std::map<unsigned int, unsigned int> geometryBoneIndices = remapGeometryBones(*bones);
+        applyBoneIndicesRemap(*bones, geometryBoneIndices);
+        serializeBonesUserValues(*bones, geometryBoneIndices, rth.getBoneNameToPalette());
+
         bones->setUserValue("bones", true);
         weights->setUserValue("weights", true);
 
@@ -106,6 +114,51 @@ public:
     }
 
 protected:
+    std::map<unsigned int, unsigned int> remapGeometryBones(const osg::Vec4uiArray& bones) {
+        std::map<unsigned int, unsigned int> remap;
+        for(unsigned int i = 0 ; i < bones.getNumElements() ; ++ i) {
+            for(unsigned int j = 0 ; j < 4 ; ++ j) {
+                if(remap.find(bones[i][j]) == remap.end()) {
+                    remap[bones[i][j]] = remap.size() - 1;
+                }
+            }
+        }
+        return remap;
+    }
+
+    void applyBoneIndicesRemap(osg::Vec4uiArray& bones, const std::map<unsigned int, unsigned int>& remap) {
+        for(unsigned int i = 0 ; i < bones.getNumElements() ; ++ i) {
+            std::map<unsigned int, unsigned int>::const_iterator x = remap.find(bones[i][0]),
+                                                                 y = remap.find(bones[i][1]),
+                                                                 z = remap.find(bones[i][2]),
+                                                                 w = remap.find(bones[i][3]);
+            bones[i] = osg::Vec4ui(x->second,
+                                   y->second,
+                                   z->second,
+                                   w->second);
+        }
+    }
+
+
+    void serializeBonesUserValues(osg::Vec4uiArray& bones, const std::map<unsigned int, unsigned int>& oldIndexToNewIndex,
+                                  const osgAnimation::RigTransformHardware::BoneNamePaletteIndex& boneNamePaletteIndex) {
+
+        // map 'global' palette index to bone name
+        std::map<unsigned int, std::string> oldIndexToBoneName;
+        for(osgAnimation::RigTransformHardware::BoneNamePaletteIndex::const_iterator it = boneNamePaletteIndex.begin() ;
+            it != boneNamePaletteIndex.end() ; ++ it) {
+            oldIndexToBoneName[static_cast<unsigned int>(it->second)] = it->first;
+        }
+
+        // serialize geometry 'palette index' => 'bone name' with user value using animationBone_ as
+        // name prefix
+        for(std::map<unsigned int, unsigned int>::const_iterator it = oldIndexToNewIndex.begin() ; it != oldIndexToNewIndex.end() ; ++ it) {
+            std::ostringstream oss;
+            oss << "animationBone_" << it->second;
+            bones.setUserValue(oss.str(), oldIndexToBoneName[it->first]);
+        }
+    }
+
     bool isProcessed(osg::Drawable& node) {
         return _processed.find(&node) != _processed.end();
     }
