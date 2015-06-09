@@ -81,7 +81,7 @@ public:
             }
         }
 
-        osg::ref_ptr<osg::Vec4uiArray> bones = new osg::Vec4uiArray;
+        osg::ref_ptr<osg::Vec4usArray> bones = new osg::Vec4usArray;
         osg::ref_ptr<osg::Vec4Array> weights = new osg::Vec4Array;
 
         // for each vertex a partial sort to keep only n max weights (hardcoded to 4)
@@ -92,7 +92,7 @@ public:
                                    sort_weights());
 
             osg::Vec4 vertexWeights;
-            osg::Vec4ui vertexBones;
+            osg::Vec4us vertexBones;
             for(unsigned int j = 0 ; j < 4 ; ++ j) {
                 vertexBones[j] = maxVertexBoneWeight[j].first;
                 vertexWeights[j] = maxVertexBoneWeight[j].second;
@@ -102,7 +102,7 @@ public:
             weights->push_back(vertexWeights);
         }
 
-        std::map<unsigned int, unsigned int> geometryBoneIndices = remapGeometryBones(*bones);
+        std::map<unsigned int, unsigned short> geometryBoneIndices = remapGeometryBones(*bones);
         applyBoneIndicesRemap(*bones, geometryBoneIndices);
         serializeBonesUserValues(*bones, geometryBoneIndices, rth.getBoneNameToPalette());
 
@@ -114,25 +114,25 @@ public:
     }
 
 protected:
-    std::map<unsigned int, unsigned int> remapGeometryBones(const osg::Vec4uiArray& bones) {
-        std::map<unsigned int, unsigned int> remap;
+    std::map<unsigned int, unsigned short> remapGeometryBones(const osg::Vec4usArray& bones) {
+        std::map<unsigned int, unsigned short> remap;
         for(unsigned int i = 0 ; i < bones.getNumElements() ; ++ i) {
             for(unsigned int j = 0 ; j < 4 ; ++ j) {
                 if(remap.find(bones[i][j]) == remap.end()) {
-                    remap[bones[i][j]] = remap.size() - 1;
+                    remap[bones[i][j]] = static_cast<unsigned short>(remap.size() - 1);
                 }
             }
         }
         return remap;
     }
 
-    void applyBoneIndicesRemap(osg::Vec4uiArray& bones, const std::map<unsigned int, unsigned int>& remap) {
+    void applyBoneIndicesRemap(osg::Vec4usArray& bones, const std::map<unsigned int, unsigned short>& remap) {
         for(unsigned int i = 0 ; i < bones.getNumElements() ; ++ i) {
-            std::map<unsigned int, unsigned int>::const_iterator x = remap.find(bones[i][0]),
-                                                                 y = remap.find(bones[i][1]),
-                                                                 z = remap.find(bones[i][2]),
-                                                                 w = remap.find(bones[i][3]);
-            bones[i] = osg::Vec4ui(x->second,
+            std::map<unsigned int, unsigned short>::const_iterator x = remap.find(bones[i][0]),
+                                                                   y = remap.find(bones[i][1]),
+                                                                   z = remap.find(bones[i][2]),
+                                                                   w = remap.find(bones[i][3]);
+            bones[i] = osg::Vec4us(x->second,
                                    y->second,
                                    z->second,
                                    w->second);
@@ -140,7 +140,7 @@ protected:
     }
 
 
-    void serializeBonesUserValues(osg::Vec4uiArray& bones, const std::map<unsigned int, unsigned int>& oldIndexToNewIndex,
+    void serializeBonesUserValues(osg::Vec4usArray& bones, const std::map<unsigned int, unsigned short>& oldIndexToNewIndex,
                                   const osgAnimation::RigTransformHardware::BoneNamePaletteIndex& boneNamePaletteIndex) {
 
         // map 'global' palette index to bone name
@@ -152,7 +152,7 @@ protected:
 
         // serialize geometry 'palette index' => 'bone name' with user value using animationBone_ as
         // name prefix
-        for(std::map<unsigned int, unsigned int>::const_iterator it = oldIndexToNewIndex.begin() ; it != oldIndexToNewIndex.end() ; ++ it) {
+        for(std::map<unsigned int, unsigned short>::const_iterator it = oldIndexToNewIndex.begin() ; it != oldIndexToNewIndex.end() ; ++ it) {
             std::ostringstream oss;
             oss << "animationBone_" << it->second;
             bones.setUserValue(oss.str(), oldIndexToBoneName[it->first]);
