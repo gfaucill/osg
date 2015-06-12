@@ -485,23 +485,6 @@ JSONObject* WriteVisitor::createJSONGeometry(osg::Geometry* geom)
         }
     }
 
-    osg::Array* bones = getAnimationBonesArray(*geom);
-    osg::Array* weights = getAnimationWeightsArray(*geom);
-    if (bones && weights) {
-        attributes->getMaps()["Bones"] = createJSONBufferArray(bones, geom);
-        attributes->getMaps()["Weights"] = createJSONBufferArray(weights, geom);
-        int nb = bones->getNumElements();
-        if (nbVertexes != nb) {
-            osg::notify(osg::FATAL) << "Fatal nb bones " << nb << " != " << nbVertexes << std::endl;
-            error();
-        }
-        nb = weights->getNumElements();
-        if (nbVertexes != nb) {
-            osg::notify(osg::FATAL) << "Fatal nb weights " << nb << " != " << nbVertexes << std::endl;
-            error();
-        }
-    }
-
     json->getMaps()["VertexAttributeList"] = attributes;
 
     if (!geom->getPrimitiveSetList().empty()) {
@@ -558,7 +541,26 @@ JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rigGe
     JSONObject* json = createJSONGeometry(rigGeom);
 
     json->getMaps()["BoneMap"] = buildRigBoneMap(*rigGeom);
-    json->getMaps()["SourceGeometry"] =  createJSONGeometry(rigGeom->getSourceGeometry());
+
+    osg::Array* bones = getAnimationBonesArray(*rigGeom);
+    osg::Array* weights = getAnimationWeightsArray(*rigGeom);
+    if (bones && weights) {
+        JSONObject* attributes = json->getMaps()["VertexAttributeList"];
+        int nbVertexes = rigGeom->getVertexArray()->getNumElements();
+
+        attributes->getMaps()["Bones"] = createJSONBufferArray(bones, rigGeom);
+        attributes->getMaps()["Weights"] = createJSONBufferArray(weights, rigGeom);
+        int nb = bones->getNumElements();
+        if (nbVertexes != nb) {
+            osg::notify(osg::FATAL) << "Fatal nb bones " << nb << " != " << nbVertexes << std::endl;
+            error();
+        }
+        nb = weights->getNumElements();
+        if (nbVertexes != nb) {
+            osg::notify(osg::FATAL) << "Fatal nb weights " << nb << " != " << nbVertexes << std::endl;
+            error();
+        }
+    }
 
     return json;
 }
