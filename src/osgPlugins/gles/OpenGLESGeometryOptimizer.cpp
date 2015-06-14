@@ -10,7 +10,9 @@ osg::Node* OpenGLESGeometryOptimizer::optimize(osg::Node& node) {
     osg::ref_ptr<osg::Node> model = osg::clone(&node);
 
     // animation: create regular Geometry if RigGeometry
-    makeAnimation(model.get());
+    if(!_disableAnimation) {
+        makeAnimation(model.get());
+    }
 
     // wireframe
     if (!_wireframe.empty()) {
@@ -24,7 +26,7 @@ osg::Node* OpenGLESGeometryOptimizer::optimize(osg::Node& node) {
     makeIndexMesh(model.get());
 
     // smooth vertex normals (if geometry has no normal compute smooth normals)
-    makeSmoothNormal(model);
+    makeSmoothNormal(model.get());
 
     // tangent space
     if (_generateTangentSpace) {

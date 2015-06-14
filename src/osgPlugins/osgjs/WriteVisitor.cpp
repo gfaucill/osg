@@ -12,8 +12,6 @@
 #include <osgSim/ShapeAttribute>
 #include <osg/Array>
 
-#include <osgAnimation/VertexInfluence>
-
 #include "Base64"
 
 
@@ -28,6 +26,51 @@ osg::Array* getTangentSpaceArray(osg::Geometry& geometry) {
     }
     return 0;
 }
+
+
+osg::Array* getAnimationBonesArray(osg::Geometry& geometry) {
+    for(unsigned int i = 0 ; i < geometry.getNumVertexAttribArrays() ; ++ i) {
+        osg::Array* attribute = geometry.getVertexAttribArray(i);
+        bool isBones = false;
+        if(attribute && attribute->getUserValue("bones", isBones) && isBones) {
+            return attribute;
+        }
+    }
+    return 0;
+}
+
+
+osg::Array* getAnimationWeightsArray(osg::Geometry& geometry) {
+    for(unsigned int i = 0 ; i < geometry.getNumVertexAttribArrays() ; ++ i) {
+        osg::Array* attribute = geometry.getVertexAttribArray(i);
+        bool isWeights = false;
+        if(attribute && attribute->getUserValue("weights", isWeights) && isWeights) {
+            return attribute;
+        }
+    }
+    return 0;
+}
+
+
+osg::ref_ptr<JSONObject> buildRigBoneMap(osgAnimation::RigGeometry& geometry) {
+    osg::Array* bones = getAnimationBonesArray(geometry);
+    osg::ref_ptr<JSONObject> boneMap = new JSONObject;
+
+    unsigned int paletteIndex = 0;
+    while(true) {
+        std::ostringstream oss;
+        oss << "animationBone_" << paletteIndex;
+        std::string boneName, palette = oss.str();
+        if(!bones->getUserValue(palette, boneName)) {
+            break;
+        }
+        boneMap->getMaps()[boneName] = new JSONValue<int>(paletteIndex);
+        ++ paletteIndex;
+    }
+
+    return boneMap;
+}
+
 
 void translateObject(JSONObject* json, osg::Object* osg)
 {
@@ -492,34 +535,32 @@ JSONObject* WriteVisitor::createJSONGeometry(osg::Geometry* geom)
     return json.get();
 }
 
-JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rGeom)
+JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rigGeom)
 {
-    JSONObject* json = createJSONGeometry(rGeom);
-    osg::ref_ptr<JSONObject> influenceMap = new JSONObject();
+    //TODO : Convert data to JSONVertexArray "Float32Array"
+    JSONObject* json = createJSONGeometry(rigGeom);
 
-    for(osgAnimation::VertexInfluenceMap::iterator it = rGeom->getInfluenceMap()->begin() ;
-        it!=rGeom->getInfluenceMap()->end(); it++ ) {
-        osgAnimation::VertexList vi = it->second;
-        osg::ref_ptr<osg::IntArray> vertexIndexArray = new osg::IntArray();
-        osg::ref_ptr<osg::FloatArray> vertexWeigthArray = new osg::FloatArray();
+    json->getMaps()["BoneMap"] = buildRigBoneMap(*rigGeom);
 
-        for (osgAnimation::VertexList::iterator itt = vi.begin();  itt!=vi.end(); itt++) {
-            vertexIndexArray->push_back((*itt).first);
-            vertexWeigthArray->push_back((*itt).second);
+    osg::Array* bones = getAnimationBonesArray(*rigGeom);
+    osg::Array* weights = getAnimationWeightsArray(*rigGeom);
+    if (bones && weights) {
+        JSONObject* attributes = json->getMaps()["VertexAttributeList"];
+        int nbVertexes = rigGeom->getVertexArray()->getNumElements();
+
+        attributes->getMaps()["Bones"] = createJSONBufferArray(bones, rigGeom);
+        attributes->getMaps()["Weights"] = createJSONBufferArray(weights, rigGeom);
+        int nb = bones->getNumElements();
+        if (nbVertexes != nb) {
+            osg::notify(osg::FATAL) << "Fatal nb bones " << nb << " != " << nbVertexes << std::endl;
+            error();
         }
-        osg::ref_ptr<JSONObject> jsInfluenceMap = new JSONObject;
-
-        osg::ref_ptr<JSONVertexArray> jsVertexIndexArray = new JSONVertexArray(vertexIndexArray);
-        jsInfluenceMap->getMaps()["Index"] = jsVertexIndexArray;
-
-        osg::ref_ptr<JSONVertexArray> jsVertexWeightArray = new JSONVertexArray(vertexWeigthArray);
-        jsInfluenceMap->getMaps()["Weight"] = jsVertexWeightArray;
-
-        influenceMap->getMaps()[it->second.getName()] = jsInfluenceMap;
+        nb = weights->getNumElements();
+        if (nbVertexes != nb) {
+            osg::notify(osg::FATAL) << "Fatal nb weights " << nb << " != " << nbVertexes << std::endl;
+            error();
+        }
     }
-
-    json->getMaps()["InfluenceMap"] = influenceMap;
-    json->getMaps()["SourceGeometry"] =  createJSONGeometry(rGeom->getSourceGeometry());
 
     return json;
 }
