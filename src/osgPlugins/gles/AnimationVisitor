@@ -109,8 +109,8 @@ public:
         bones->setUserValue("bones", true);
         weights->setUserValue("weights", true);
 
-        geometry.setVertexAttribArray(geometry.getNumVertexAttribArrays(), bones, osg::Array::BIND_PER_VERTEX);
-        geometry.setVertexAttribArray(geometry.getNumVertexAttribArrays(), weights, osg::Array::BIND_PER_VERTEX);
+        geometry.setVertexAttribArray(geometry.getNumVertexAttribArrays(), bones.get(), osg::Array::BIND_PER_VERTEX);
+        geometry.setVertexAttribArray(geometry.getNumVertexAttribArrays(), weights.get(), osg::Array::BIND_PER_VERTEX);
     }
 
 protected:

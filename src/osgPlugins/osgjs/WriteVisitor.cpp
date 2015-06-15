@@ -545,7 +545,7 @@ JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rigGe
     osg::Array* bones = getAnimationBonesArray(*rigGeom);
     osg::Array* weights = getAnimationWeightsArray(*rigGeom);
     if (bones && weights) {
-        JSONObject* attributes = json->getMaps()["VertexAttributeList"];
+        osg::ref_ptr<JSONObject> attributes = json->getMaps()["VertexAttributeList"];
         int nbVertexes = rigGeom->getVertexArray()->getNumElements();
 
         attributes->getMaps()["Bones"] = createJSONBufferArray(bones, rigGeom);
