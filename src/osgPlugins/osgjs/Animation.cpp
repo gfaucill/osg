@@ -35,11 +35,11 @@ static bool addJSONChannelVec3(osgAnimation::Vec3LinearChannel* channel, JSONObj
         }
 
         osg::ref_ptr<JSONArray> keysArray = new JSONArray;
-        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayX));
-        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayY));
-        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayZ));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayX.get()));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayY.get()));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayZ.get()));
 
-        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray);
+        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray.get());
         jsKeys->getMaps()["Key"] = keysArray;
         json->getMaps()["KeyFrames"] = jsKeys;
 
@@ -67,8 +67,8 @@ static bool addJSONChannelFloat(osgAnimation::FloatLinearChannel* channel, JSONO
             keysArray->push_back((*keys)[i].getValue());
         }
 
-        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray);
-        jsKeys->getMaps()["Key"] = new JSONBufferArray(keysArray);
+        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray.get());
+        jsKeys->getMaps()["Key"] = new JSONBufferArray(keysArray.get());
         json->getMaps()["KeyFrames"] = jsKeys;
 
         osg::ref_ptr<JSONObject> jsonChannel = new JSONObject();
@@ -103,12 +103,12 @@ static bool addJSONChannelQuaternion(osgAnimation::QuatSphericalLinearChannel* c
         }
 
         osg::ref_ptr<JSONArray> keysArray = new JSONArray;
-        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayX));
-        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayY));
-        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayZ));
-        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayW));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayX.get()));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayY.get()));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayZ.get()));
+        keysArray->asArray()->getArray().push_back(new JSONBufferArray(keysArrayW.get()));
 
-        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray);
+        jsKeys->getMaps()["Time"] = new JSONBufferArray(timesArray.get());
         jsKeys->getMaps()["Key"] = keysArray;
         json->getMaps()["KeyFrames"] = jsKeys;
 
@@ -141,16 +141,16 @@ static bool addJSONChannelFloatCubicBezier(osgAnimation::FloatCubicBezierChannel
         }
         osg::ref_ptr<JSONObject> jsKeys = new JSONObject;
 
-        osg::ref_ptr<JSONBufferArray> controlOutVertexArray = new JSONBufferArray(controlPointOutArray);
+        osg::ref_ptr<JSONBufferArray> controlOutVertexArray = new JSONBufferArray(controlPointOutArray.get());
         jsKeys->getMaps()["ControlPointOut"] = controlOutVertexArray;
 
-        osg::ref_ptr<JSONBufferArray> controlInVertexArray = new JSONBufferArray(controlPointInArray);
+        osg::ref_ptr<JSONBufferArray> controlInVertexArray = new JSONBufferArray(controlPointInArray.get());
         jsKeys->getMaps()["ControlPointIn"] = controlInVertexArray;
 
-        osg::ref_ptr<JSONBufferArray> positionVertexArray = new JSONBufferArray(positionArray);
+        osg::ref_ptr<JSONBufferArray> positionVertexArray = new JSONBufferArray(positionArray.get());
         jsKeys->getMaps()["Position"] = positionVertexArray;
 
-        osg::ref_ptr<JSONBufferArray> timeVertexArray = new JSONBufferArray(timeArray);
+        osg::ref_ptr<JSONBufferArray> timeVertexArray = new JSONBufferArray(timeArray.get());
         jsKeys->getMaps()["Time"] = timeVertexArray;
 
         json->getMaps()["KeyFrames"] = jsKeys;
@@ -202,24 +202,24 @@ static bool addJSONChannelVec3CubicBezier(osgAnimation::Vec3CubicBezierChannel* 
         osg::ref_ptr<JSONObject> jsKeys = new JSONObject;
 
         osg::ref_ptr<JSONArray> jsControlPointOutArray = new JSONArray;
-        jsControlPointOutArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointOutArrayX));
-        jsControlPointOutArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointOutArrayY));
-        jsControlPointOutArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointOutArrayZ));
+        jsControlPointOutArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointOutArrayX.get()));
+        jsControlPointOutArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointOutArrayY.get()));
+        jsControlPointOutArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointOutArrayZ.get()));
         jsKeys->getMaps()["ControlPointOut"] = jsControlPointOutArray;
 
         osg::ref_ptr<JSONArray> jsControlPointInArray = new JSONArray;
-        jsControlPointInArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointInArrayX));
-        jsControlPointInArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointInArrayY));
-        jsControlPointInArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointInArrayZ));
+        jsControlPointInArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointInArrayX.get()));
+        jsControlPointInArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointInArrayY.get()));
+        jsControlPointInArray->asArray()->getArray().push_back(new JSONBufferArray(controlPointInArrayZ.get()));
         jsKeys->getMaps()["ControlPointIn"] = jsControlPointInArray;
 
         osg::ref_ptr<JSONArray> jsPositionVertexArray = new JSONArray;
-        jsPositionVertexArray->asArray()->getArray().push_back(new JSONBufferArray(positionArrayX));
-        jsPositionVertexArray->asArray()->getArray().push_back(new JSONBufferArray(positionArrayY));
-        jsPositionVertexArray->asArray()->getArray().push_back(new JSONBufferArray(positionArrayZ));
+        jsPositionVertexArray->asArray()->getArray().push_back(new JSONBufferArray(positionArrayX.get()));
+        jsPositionVertexArray->asArray()->getArray().push_back(new JSONBufferArray(positionArrayY.get()));
+        jsPositionVertexArray->asArray()->getArray().push_back(new JSONBufferArray(positionArrayZ.get()));
         jsKeys->getMaps()["Position"] = jsPositionVertexArray;
 
-        osg::ref_ptr<JSONBufferArray> timeVertexArray = new JSONBufferArray(timeArray);
+        osg::ref_ptr<JSONBufferArray> timeVertexArray = new JSONBufferArray(timeArray.get());
         jsKeys->getMaps()["Time"] = timeVertexArray;
 
         json->getMaps()["KeyFrames"] = jsKeys;
