@@ -171,16 +171,17 @@ osg::Geode* createAxis()
 }
 
 
-
-// This idea here is to compute AABB by bone for a skelton
+// Here this idea is to compute AABB by bone for a skelton
+// You just need to call this visitor on a skeleton
+// If you have more than one skeleton you should crete a visitor by skeleton
 class ComputeAABBOnBoneVisitor : public osg::NodeVisitor {
 
 public:
-    ComputeAABBOnBoneVisitor() : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN), _firstCall(true), _root(0) {}
+    ComputeAABBOnBoneVisitor() : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN), _root(0), _firstCall(true) {}
 
 #define  handleError() \
         if(_firstCall) { \
-            std::cout << "ComputeAABBOnBoneVisitor must be call over a skeleton." << std::endl; \
+            osg::notify(osg::WARN) << "ComputeAABBOnBoneVisitor must be call over a skeleton." << std::endl; \
             return; \
         }
 
@@ -198,8 +199,7 @@ public:
         osgAnimation::Bone * b = dynamic_cast<osgAnimation::Bone*>(&node);
         if(b) apply(*b);
         traverse(node);
-        if(skl)
-            computeBoundingBoxOnBones();
+        if(skl) computeBoundingBoxOnBones();
     }
 
     void apply(osgAnimation::Bone &bone) {
@@ -212,7 +212,9 @@ public:
         _rigGeometries.push_back(&rig);
     }
 
-    inline void updateMesh() {
+    void computeBoundingBoxOnBones() {
+
+        //Perform Updates
         //Update Bones
         osgUtil::UpdateVisitor up;
         _root->accept(up);
@@ -223,16 +225,6 @@ public:
             osg::Drawable::UpdateCallback * up = dynamic_cast<osg::Drawable::UpdateCallback*>(rig->getUpdateCallback());
             if(up) up->update(0, rig);
         }
-
-        for (unsigned int i = 0, size = _rigGeometries.size(); i < size; i++) {
-            osgAnimation::RigGeometry * rig = _rigGeometries.at(i);
-            rig->update();
-        }
-    }
-
-    void computeBoundingBoxOnBones() {
-
-        updateMesh();
 
         //Compute AABB for each bone
         for ( std::vector<osgAnimation::Bone*>::iterator it = _bones.begin(); it != _bones.end(); it++) {
@@ -253,14 +245,14 @@ public:
                 osg::Vec3Array *vertices = dynamic_cast<osg::Vec3Array*>(geom->getVertexArray());
 
                 //Expand the boundingBox with each vertex
-                for(int j = 0; j < vxtInf.size(); j++) {
+                for(unsigned int j = 0; j < vxtInf.size(); j++) {
                     if(vxtInf.at(j).second < 10e-2) continue; //Skip vertex if low weight
                     osg::Vec3 vx = vertices->at(vxtInf.at(j).first);
                     vx = mtxLocalToSkl* vx;
                     bb.expandBy(vx);
                 }
 
-                if(bb == osg::BoundingBox()) continue; //Compare initial and actual boundingBox
+                if(bb == osg::BoundingBox()) continue; //Compare initial and actual boundingBox if (no change) => no box on bone
 
                 osg::Matrix worldToBone = osg::Matrix::inverse(b->getWorldMatrices()[0]);
 
@@ -274,8 +266,8 @@ public:
 
     std::vector<osgAnimation::Bone*> _bones;
     std::vector<osgAnimation::RigGeometry*> _rigGeometries;
-    bool _firstCall;
     osgAnimation::Skeleton *_root;
+    bool _firstCall;
 };
 
 
@@ -309,18 +301,6 @@ struct AddHelperBone : public osg::NodeVisitor
     }
 };
 
-struct FindNearestParentSkeleton : public osg::NodeVisitor
-{
-    osg::ref_ptr<osgAnimation::Skeleton> _root;
-    FindNearestParentSkeleton() : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_PARENTS) {}
-    void apply(osg::Transform& node)
-    {
-        if (_root.valid())
-            return;
-        _root = dynamic_cast<osgAnimation::Skeleton*>(&node);
-        traverse(node);
-    }
-};
 
 struct FindSkeletons : public osg::NodeVisitor
 {
@@ -333,204 +313,6 @@ struct FindSkeletons : public osg::NodeVisitor
     }
 
     std::vector<osgAnimation::Skeleton*> _skls;
-};
-
-struct FindRigGeometry : public osg::NodeVisitor
-{
-
-    std::vector<osgAnimation::RigGeometry*>  _geometry;
-
-    FindRigGeometry() : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {}
-    void apply(osg::Node& node)
-    {
-        osgAnimation::RigGeometry *rig = dynamic_cast<osgAnimation::RigGeometry*>(&node);
-        if(rig) {
-
-            _geometry.push_back(rig);
-
-            osg::PolygonMode * polygonMode = new osg::PolygonMode;
-            polygonMode->setMode( osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE );
-            rig->getOrCreateStateSet()->setAttributeAndModes( polygonMode,
-                                                                           osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-        }
-        traverse(node);
-    }
-};
-
-
-
-class AnimationVisitor : public osgUtil::UpdateVisitor
-{
-public:
-    AnimationVisitor() {}
-
-    void apply(osg::Drawable& drawable) {
-        apply(drawable.asGeometry());
-    }
-
-    void apply(osg::Geometry* geometry) {
-        osgAnimation::RigGeometry* rig = dynamic_cast<osgAnimation::RigGeometry*>(geometry);
-        if(rig) {
-            apply(*rig);
-        }
-    }
-
-    void apply(osgAnimation::RigGeometry& geometry) {
-        // find skeleton
-        osgAnimation::UpdateRigGeometry rigUpdater;
-        rigUpdater.update(0, &geometry);
-    }
-};
-
-// Here this idea is to compute a set of bounding box for a RigGeometry.
-// This callback compute an AABB for a bone
-//
-// This bounding box is computed in skeleton space
-//
-//
-//     [ Bone ]
-//         |
-//    [ Geometry (Box) ]
-class ComputeBoundingBoxForBone : public osg::NodeCallback
-{
-public:
-    ComputeBoundingBoxForBone() : _compute(0) {};
-
-    void operator()(osg::Node* node, osg::NodeVisitor* nv) {
-
-        if(  _compute > 2 ) return;
-
-        osgAnimation::Bone * b = NULL;
-        if( ! (b = dynamic_cast <osgAnimation::Bone *> ( node->getParent(0) )) ) return;
-
-
-        //Find Skeleton
-        FindNearestParentSkeleton fnps;
-        node->accept(fnps);
-
-        if(!fnps._root.valid()) return;
-        //Find RigGeometries
-        FindRigGeometry fg;
-        osgAnimation::Skeleton * skl = fnps._root.get();
-        skl->accept(fg);
-
-        if(fg._geometry.empty()) return;
-
-        osg::BoundingBox bb;
-        //For Each Geometry
-        for (int i = 0; i < fg._geometry.size(); i++) {
-            osgAnimation::RigGeometry * geom = fg._geometry[i];
-
-//            osgAnimation::UpdateRigGeometry rigUpdater;
-//            rigUpdater.update(0, geom);
-
-
-
-            osg::MatrixList ml = geom->getWorldMatrices(skl);
-            osg::Matrix mtxLocalToSkl = ml.at(0);
-
-            //For each Vertex influence
-            osgAnimation::VertexInfluenceMap * infMap = geom->getInfluenceMap();
-            osgAnimation::VertexInfluenceMap::iterator it = infMap->find(b->getName());
-            if(it == infMap->end()) continue;
-            //osgAnimation::VertexInfluence vi = it->second;
-
-            osgAnimation::VertexInfluence vxtInf = (*it).second;
-            if(vxtInf.size() == 0) continue; //Skip if no vertex influence for this bone
-
-            osg::Vec3Array *vertices = dynamic_cast<osg::Vec3Array*>(geom->getVertexArray());
-
-            for(int j = 0; j < vxtInf.size(); j++) {
-
-                if(vxtInf.at(j).second < 10e-2) continue; //Skip vertex if low weight
-                osg::Vec3 vx = vertices->at(vxtInf.at(j).first);
-                vx = mtxLocalToSkl* vx;
-                bb.expandBy(vx);
-            }
-        }
-        osg::Geode *g = static_cast<osg::Geode*> (node);
-
-        osg::Matrix worldToBone = osg::Matrix::inverse(b->getWorldMatrices()[0]);   g->addDrawable(createBox(bb, worldToBone));
-
-        //        osg::MatrixTransform * mt = dynamic_cast<osg::MatrixTransform*>(node->getParent(0));
-        //        if( ! mt ) return;
-
-        //        mt->setMatrix(worldToBone);
-        //        osg::Vec3 min=bb._min, max=bb._max, center=bb.center();
-
-               if(bb.center().x() == 0 && bb.center().y() == 0 && bb.center().z() == 0 ) return; //Adds no geometry if the initial BB not changed
-
-        //        osg::ShapeDrawable * sd = new osg::ShapeDrawable();
-        //        sd->setShape(new osg::Box(center, max.x() - min.x(), max.y() - min.y(),  max.z() - min.z()));
-        //        g->addDrawable(sd);
-
-
-        g->addDrawable(createBox(bb, worldToBone));
-
-
-        _compute++;
-    }
-
-    int _compute;
-};
-
-
-
-
-// TO delete
-//        Compute Bounding box here
-//         And set it to the cubeShape
-//        osg::Geode *g = static_cast<osg::Geode*> (node);
-//        osg::ShapeDrawable * sd = static_cast<osg::ShapeDrawable*>(g->getDrawable(0));
-
-//        //sd->setShape(new osg::Box( (min + max) / 2.f, max.x() - min.x(), max.y()-min.y(), max.z()-min.z()));
-//        sd->setShape(new osg::Box(bb.center(), bb._max.x() - bb._min.x(), bb._max.y() - bb._min.y(), bb._max.z() - bb._min.z() ));
-
-//        std::cout << b->getName() << std::endl;
-
-//        std::cout << max.x() - min.x() << " " << max.y()-min.y() << " " << max.z()-min.z() << std::endl;
-
-//        sd->setShape(new osg::Sphere((min + max) / 2.f, (max-min).length() / 2.f ));
-
-
-struct SetBoxOnBoneVisitor : public osg::NodeVisitor
-{
-public:
-
-    SetBoxOnBoneVisitor() : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {};
-
-    virtual void apply(osg::MatrixTransform& node)
-    {
-        osgAnimation::Bone * b = dynamic_cast<osgAnimation::Bone*>(&node);
-        if(b) {
-
-//            osg::MatrixTransform *mt = new osg::MatrixTransform();
-
-////            osg::Box* unitCube = new osg::Box( osg::Vec3(0,0,0), 1.0f);
-////            osg::ShapeDrawable* unitCubeDrawable = new osg::ShapeDrawable(unitCube);
-//            osg::Geode* basicShapesGeode = new osg::Geode();
-//            //basicShapesGeode->addDrawable(unitCubeDrawable);
-
-//            //wireframe
-//            osg::PolygonMode * polygonMode = new osg::PolygonMode;
-//            polygonMode->setMode( osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE );
-//            basicShapesGeode->getOrCreateStateSet()->setAttributeAndModes( polygonMode,
-//                                                                           osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-//            mt->addChild(basicShapesGeode);
-//            basicShapesGeode->setUpdateCallback(new ComputeBoundingBoxForBone);
-
-//            b->addChild(mt);
-
-//             osgAnimation::UpdateBone ub;
-//             ub(b,0);
-
-              osg::Geode * g = new osg::Geode;
-              g->setUpdateCallback(new ComputeBoundingBoxForBone);
-              b->addChild(g);
-        }
-
-        this->traverse(node);
-    }
 };
 
 
@@ -568,10 +350,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    //Set Geometry Update callback boundingBox
-//    SetBoxOnBoneVisitor bbv;
-//    node->accept(bbv);
-
+    //BB computing
     FindSkeletons fs;
     node->accept(fs);
 
