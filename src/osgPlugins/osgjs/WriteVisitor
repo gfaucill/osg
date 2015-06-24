@@ -21,6 +21,11 @@
 #include <osg/BlendColor>
 #include <osg/BlendFunc>
 #include <osg/ValueObject>
+#include <osg/Array>
+
+#include <osgAnimation/RigGeometry>
+#include <osgAnimation/Bone>
+#include <osgAnimation/UpdateBone>
 
 #include <osgAnimation/RigGeometry>
 #include <osgAnimation/Bone>
@@ -493,6 +498,15 @@ public:
 
         json->getMaps()["InvBindMatrixInSkeletonSpace"] = new JSONMatrix(node.getInvBindMatrixInSkeletonSpace());
         //json->getMaps()["MatrixInSkeletonSpace"] = new JSONMatrix(node.getMatrixInSkeletonSpace());
+
+        osg::Vec3 min, max;
+        if(node.getUserValue("AABBonBone_min", min) && node.getUserValue("AABBonBone_max", max)) {
+            JSONObject *obj = new JSONObject;
+            obj->getMaps()["min"] = new JSONVec3Array(min);
+            obj->getMaps()["max"] = new JSONVec3Array(max);
+
+            json->getMaps()["AABBonBone"] = obj;
+        }
 
         _parents.push_back(json);
         traverse(node);
