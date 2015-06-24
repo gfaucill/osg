@@ -39,6 +39,8 @@ struct sort_weights {
 class AnimationVisitor : public osgUtil::UpdateVisitor
 {
 public:
+    typedef std::map<unsigned int, unsigned short> boneIndices;
+
     AnimationVisitor():
         _logger("AnimationVisitor::apply(..)")
     {
@@ -102,7 +104,7 @@ public:
             weights->push_back(vertexWeights);
         }
 
-        std::map<unsigned int, unsigned short> geometryBoneIndices = remapGeometryBones(*bones);
+        boneIndices geometryBoneIndices = remapGeometryBones(*bones);
         applyBoneIndicesRemap(*bones, geometryBoneIndices);
         serializeBonesUserValues(*bones, geometryBoneIndices, rth.getBoneNameToPalette());
 
@@ -111,11 +113,13 @@ public:
 
         geometry.setVertexAttribArray(geometry.getNumVertexAttribArrays(), bones.get(), osg::Array::BIND_PER_VERTEX);
         geometry.setVertexAttribArray(geometry.getNumVertexAttribArrays(), weights.get(), osg::Array::BIND_PER_VERTEX);
+
+        geometry.setRigTransformImplementation(0); //Remove current implementation to force implementation re-init
     }
 
 protected:
-    std::map<unsigned int, unsigned short> remapGeometryBones(const osg::Vec4usArray& bones) {
-        std::map<unsigned int, unsigned short> remap;
+    boneIndices remapGeometryBones(const osg::Vec4usArray& bones) {
+        boneIndices remap;
         for(unsigned int i = 0 ; i < bones.getNumElements() ; ++ i) {
             for(unsigned int j = 0 ; j < 4 ; ++ j) {
                 if(remap.find(bones[i][j]) == remap.end()) {
@@ -126,12 +130,12 @@ protected:
         return remap;
     }
 
-    void applyBoneIndicesRemap(osg::Vec4usArray& bones, const std::map<unsigned int, unsigned short>& remap) {
+    void applyBoneIndicesRemap(osg::Vec4usArray& bones, const boneIndices& remap) {
         for(unsigned int i = 0 ; i < bones.getNumElements() ; ++ i) {
-            std::map<unsigned int, unsigned short>::const_iterator x = remap.find(bones[i][0]),
-                                                                   y = remap.find(bones[i][1]),
-                                                                   z = remap.find(bones[i][2]),
-                                                                   w = remap.find(bones[i][3]);
+            boneIndices::const_iterator x = remap.find(bones[i][0]),
+                    y = remap.find(bones[i][1]),
+                    z = remap.find(bones[i][2]),
+                    w = remap.find(bones[i][3]);
             bones[i] = osg::Vec4us(x->second,
                                    y->second,
                                    z->second,
