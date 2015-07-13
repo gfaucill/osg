@@ -24,6 +24,7 @@
 #include <osg/Array>
 
 #include <osgAnimation/RigGeometry>
+#include <osgAnimation/MorphGeometry>
 #include <osgAnimation/Bone>
 #include <osgAnimation/UpdateBone>
 
@@ -245,6 +246,7 @@ public:
 
     JSONObject* createJSONGeometry(osg::Geometry* geom);
     JSONObject* createJSONRigGeometry(osgAnimation::RigGeometry* rGeom);
+    JSONObject* createJSONMorphGeometry(osgAnimation::MorphGeometry* morphGeom);
 
     JSONObject* getParent() {
         if (_parents.empty()) {
@@ -326,6 +328,17 @@ public:
                             _maps[&node] = json;
                             jsonObject->getMaps()["osgAnimation.UpdateSkeleton"] = json;
                             updateCallbacks->getArray().push_back(jsonObject);
+                        } else {
+                            osgAnimation::UpdateMorph* updateMorph = dynamic_cast<osgAnimation::UpdateMorph*>(nc);
+                            if(updateMorph) {
+                                osg::ref_ptr<JSONObject> json = new JSONNode;
+                                osg::ref_ptr<JSONObject> jsonObject = new JSONObject;
+                                json->addUniqueID();
+                                json->getMaps()["Name"] = new JSONValue<std::string>(updateMorph->getName());
+                                _maps[&node] = json;
+                                jsonObject->getMaps()["osgAnimation.UpdateMorph"] = json;
+                                updateCallbacks->getArray().push_back(jsonObject);
+                            }
                         }
                     }
                 }
@@ -345,12 +358,19 @@ public:
             JSONObject* parent = getParent();
             parent->addChild("osgAnimation.RigGeometry", json);
         } else {
-            osg::Geometry* geom = dynamic_cast<osg::Geometry*>(&drw);
-            if (geom) {
-                JSONObject* json = createJSONGeometry(geom);
+            osgAnimation::MorphGeometry * mGeom = dynamic_cast<osgAnimation::MorphGeometry*>(&drw);
+            if(mGeom) {
+                JSONObject* json = createJSONMorphGeometry(mGeom);
                 JSONObject* parent = getParent();
-                parent->addChild("osg.Geometry", json);
-           }
+                parent->addChild("osgAnimation.MorphGeometry", json);
+            } else {
+                osg::Geometry* geom = dynamic_cast<osg::Geometry*>(&drw);
+                if (geom) {
+                    JSONObject* json = createJSONGeometry(geom);
+                    JSONObject* parent = getParent();
+                    parent->addChild("osg.Geometry", json);
+                }
+            }
         }
     }
 

@@ -3,6 +3,7 @@
 #include <limits> // numeric_limits
 
 #include <osg/Geometry>
+#include <osgAnimation/MorphGeometry>
 #include <osg/PrimitiveSet>
 #include <osg/ValueObject>
 #include <osgUtil/MeshOptimizers>
@@ -104,6 +105,18 @@ void IndexMeshVisitor::apply(osg::Geometry& geom) {
     // remap any shared vertex attributes
     RemapArray ra(copyMapping);
     arrayComparitor.accept(ra);
+
+    //Remap morphGeometry target
+    osgAnimation::MorphGeometry *morphGeom = dynamic_cast<osgAnimation::MorphGeometry*>(&geom);
+    if(morphGeom) {
+        osgAnimation::MorphGeometry::MorphTargetList targetList = morphGeom->getMorphTargetList();
+        for (osgAnimation::MorphGeometry::MorphTargetList::iterator ti = targetList.begin(); ti != targetList.end(); ti++)  {
+            osgAnimation::MorphGeometry::MorphTarget *mt = &(*ti);
+            osg::Geometry *g = mt->getGeometry();
+            VertexAttribComparitor arrayComparitor(*g);
+            arrayComparitor.accept(ra);
+        }
+    }
 
     // triangulate faces
     {

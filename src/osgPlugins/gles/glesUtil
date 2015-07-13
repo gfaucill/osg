@@ -11,6 +11,8 @@
 #include <osgUtil/MeshOptimizers>
 #include <osg/TriangleIndexFunctor>
 
+#include <osgAnimation/MorphGeometry>
+
 #include "TriangleLinePointIndexFunctor"
 #include "StatLogger"
 #include "forsythtriangleorderoptimizer.h"
@@ -557,6 +559,19 @@ namespace glesUtil {
 
             Remapper remapper(vr.remap);
             gatherer.accept(remapper);
+
+            //Remap morphGeometry target
+            osgAnimation::MorphGeometry *morphGeom = dynamic_cast<osgAnimation::MorphGeometry*>(&geom);
+            if(morphGeom) {
+                osgAnimation::MorphGeometry::MorphTargetList targetList = morphGeom->getMorphTargetList();
+                for (osgAnimation::MorphGeometry::MorphTargetList::iterator ti = targetList.begin(); ti != targetList.end(); ti++)  {
+                    osgAnimation::MorphGeometry::MorphTarget *mt = &(*ti);
+                    osg::Geometry *g = mt->getGeometry();
+                    GeometryArrayGatherer gatherer(*g);
+                    gatherer.accept(remapper);
+                }
+            }
+
             Geometry::PrimitiveSetList newPrimitives;
             for (Geometry::PrimitiveSetList::iterator itr = primSets.begin(),
                      end = primSets.end();

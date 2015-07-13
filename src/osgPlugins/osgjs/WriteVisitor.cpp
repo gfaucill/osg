@@ -11,7 +11,11 @@
 #include <osg/BlendFunc>
 #include <osgSim/ShapeAttribute>
 
+#include <osgAnimation/MorphGeometry>
+
 #include "Base64"
+
+#include <iostream>
 
 
 
@@ -540,8 +544,15 @@ JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rigGe
     JSONObject *json = new JSONNode;
     JSONObject *sourceGeometry = new JSONObject;
 
-    if(dynamic_cast<osg::Geometry*>(rigGeom->getSourceGeometry())) {
-        sourceGeometry->getMaps()["osg.Geometry"] = createJSONGeometry(rigGeom);
+
+    osg::Geometry * geom  = dynamic_cast<osg::Geometry*>(rigGeom->getSourceGeometry());
+    if(geom) {
+        sourceGeometry->getMaps()["osg.Geometry"] = createJSONGeometry(geom);
+    } else {
+        osgAnimation::MorphGeometry *morphGeom = dynamic_cast<osgAnimation::MorphGeometry*>(rigGeom->getSourceGeometry());
+        if(morphGeom){
+            sourceGeometry->getMaps()["osgAnimation.MorphGeometry"] = createJSONMorphGeometry(morphGeom);
+        }
     }
 
     json->getMaps()["SourceGeometry"] = sourceGeometry;
@@ -570,6 +581,35 @@ JSONObject* WriteVisitor::createJSONRigGeometry(osgAnimation::RigGeometry* rigGe
     }
 
     return json;
+}
+
+JSONObject* WriteVisitor::createJSONMorphGeometry(osgAnimation::MorphGeometry* morphGeom)
+{
+    JSONObject *geo = createJSONGeometry(morphGeom);
+    JSONArray *targetList = new JSONArray;
+
+    osgAnimation::MorphGeometry::MorphTargetList mTargetList = morphGeom->getMorphTargetList();
+    typedef osgAnimation::MorphGeometry::MorphTargetList::iterator TargetIterator;
+
+    for(TargetIterator ti = mTargetList.begin(); ti != mTargetList.end(); ti++) {
+        osgAnimation::MorphGeometry::MorphTarget *mt = &(*ti);
+        JSONObject * geom = new JSONObject;
+        if(dynamic_cast<osg::Geometry*>(mt->getGeometry())) {
+            geom->getMaps()["osg.Geometry"] = createJSONGeometry(mt->getGeometry());
+            targetList->asArray()->getArray().push_back(geom);
+        }
+    }
+    geo->getMaps()["MorphTargets"] = targetList;
+
+    //Collect UpdateCallBack
+    osgAnimation::UpdateMorphGeometry *umg = dynamic_cast<osgAnimation::UpdateMorphGeometry*>(morphGeom->getUpdateCallback());
+    if(umg) {
+        JSONObject *cb = new JSONObject;
+        cb->addUniqueID();
+        geo->getMaps()["osgAnimation.UpdateMorphGeometry"] = cb;
+    }
+
+    return geo;
 }
 
 JSONObject* WriteVisitor::createJSONBlendFunc(osg::BlendFunc* sa)
